@@ -1,0 +1,75 @@
+version: '2'
+
+services:
+ transmission:
+  build:
+     context: .
+     dockerfile: Dockerfile.armhf
+  image: haugene/rpi-transmission-openvpn
+  cap_add:
+    - NET_ADMIN
+  devices:
+    - "/dev/net/tun"
+  restart: always
+  ports:
+    - "9091:9091"
+  dns:
+    - 8.8.8.8
+    - 8.8.4.4
+  volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /mnt/downloads/:/data
+  environment:
+    - OPENVPN_PROVIDER=PIA
+    - OPENVPN_USERNAME=
+    - OPENVPN_PASSWORD=
+    - OPENVPN_CONFIG=Sweden
+    - OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60
+    - LOCAL_NETWORK=192.168.0.0/24
+
+ proxy:
+  build:
+     context: ./proxy
+     dockerfile: Dockerfile.armhf
+  image: haugene/rpi-transmission-openvpn-proxy
+  restart: always
+  links:
+    - transmission
+  ports:
+    - "8080:8080"
+  volumes:
+    - /etc/localtime:/etc/localtime:ro
+ 
+ sonarr:
+  image: lsioarmhf/sonarr
+  restart: always
+  ports:
+    - "8989:8989"
+  volumes:
+    - sonarr_config:/config
+    - /mnt/tv:/tv
+    - /mnt/downloads:/downloads
+  environment:
+    - TZ=America/Phoenix
+    - PUID=1000
+    - PGID=1000
+
+ radarr:
+  image: lsioarmhf/radarr
+  restart: always
+  ports:
+    - "7878:7878"
+  volumes:
+    - radarr_config:/config
+    - /mnt/movies:/movies
+    - /mnt/downloads:/downloads
+  environment:
+    - TZ=America/Phoenix
+    - PUID=1000
+    - PGID=1000
+
+volumes:
+  sonarr_config:
+    external: true
+  radarr_config:
+    external: true
